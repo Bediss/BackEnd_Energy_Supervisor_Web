@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <title>Title</title>
+        <style type="text/css">
+            body {
+                font-weight: 200;
+                font-size: 14px;
+            }
+            .header {
+                font-size: 20px;
+                font-weight: 100;
+                text-align: center;
+                color: #007cae;
+            }
+            .title {
+                font-size: 22px;
+                font-weight: 100;
+               /* text-align: right;*/
+               padding: 10px 20px 0px 20px;  
+            }
+            .title span {
+                color: #007cae;
+            }
+            .details {
+                padding: 10px 20px 0px 20px;
+                text-align: left !important;
+                /*margin-left: 40%;*/
+            }
+            .hrItem {
+                border: none;
+                height: 1px;
+                /* Set the hr color */
+                color: #333; /* old IE */
+                background-color: #fff; /* Modern Browsers */
+            }
+        </style>
+    </head>
+    <body>
+        <div class='wrapper'>
+            <div class='header'>
+                <p class='title'>Rapport {{invoice_id}} </p>
+            </div>
+        <div>
+        <div class='details'>
+            Bill to: {{customer_name}} <br/>
+            Amount: {{amount}} <br/>
+            Date: {{today}}
+            <hr class='hrItem' />
+        </div>
+        <div>
+            <!-- graphe 1: 
+            {% load static %}
+            <img src="data:image/png;base64,{{graph1}}" /> -->
+
+            graphe 2 : 
+            <img src="data:image/png;base64,{{graph2}}" />
+
+           <!--  graphe 3 : 
+            <img src="data:image/png;base64,{{graph3}}" />
+
+            graphe 4 : 
+            <img src="data:image/png;base64,{{graph4}}" />
+            
+            graphe 5 : ///////////////////////////////////////////////////
+            <img src="data:image/png;base64,{{graph4}}" /> -->
+           
+            <!-- <img src="{% static 'images/fig2.jpg' %}" alt="graphe" > -->
+            graphe 77 : ///////////////////////////////////////////////////
+            <!-- <img src="data:image/png;base64,{{graph7}}" />  -->
+            <!-- <img src="{% static 'images/Synoptique_Energitique_Electrique_Mazraa.jpg' %}" alt="graphe1" > -->
+            <!-- <img src="{% static 'images/Synoptique Energitique Vapeur_ElMarzaa.jpg' %}" alt="graphe2" >  -->
+            <img src="data:image/png;base64,{{graph8}}" /> 
+            
+            
+
+        
+        </div>
+    </div>
+    </body>
+</html>
