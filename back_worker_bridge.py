@@ -46,8 +46,7 @@ class Back_worker_bridge(object):
         """
         if self.__oneTimeUse is True:
             self.__oneTimeInit(self.__result_expires)
-        work = self.__app.send_task("iot_inner", args=[task],countdown= self.__retrys,queue="iot_queue")
-
+        work = self.__app.send_task("iot_inner", args=[task],queue="iot_queue")
         while not work.ready():
             time.sleep(0.5)
             pass

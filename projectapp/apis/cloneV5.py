@@ -57,6 +57,13 @@ def cloneReport_api(request,newBody=None):
                                         "members": clSchema
                                     }
                                 },
+                                "params":{
+                                    "type":"object",
+                                    "properties":{
+                                        "live":{"type":"boolean"},
+                                        "frequency":{"type":"integer","minimum":0}
+                                        }
+                                    },
                                 "absTitles": {"type": "array", "items": {"type": ["string", 'null']}},
                                 "yAxisTitles": {"type": "array", "items": {"type": "array", "items": {"type": "string","minLength":1}}},
                                 "title": {"type": "string", "minLength": 5},
@@ -120,7 +127,9 @@ def cloneReport_api(request,newBody=None):
         if DR_IDs is not None:
             if len(DR_IDs) != len(R_IDs) or superClone is False:
                 return HttpResponseBadRequest()
-
+        # 1 update
+        # 2 add
+        # 3 delete
         action=2
         if superClone is True:
             if DR_IDs is not None:
@@ -128,7 +137,6 @@ def cloneReport_api(request,newBody=None):
             else:
                 action=2
              
-
         tasker = Back_DB_bridge(database=databasename, username=databaseUser,
                                 password=databasePassword, server=databaseServer, port=databasePort)
 
@@ -208,33 +216,6 @@ def cloneReport_api(request,newBody=None):
                 for i in range(len(report["Body"]["objects"])):
                     rep = report["Body"]["objects"][i]
 
-                    # xS = rep["MasterObj_Data_selection"]["masterObjectX"]
-                    # tS = rep["MasterObj_Data_selection"]["MasterObjPage"]["membersList"]
-                    # for j in range(len(xS)):
-                    #     if "SQL" in xS[j]:
-                    #         if "''" not in xS[j]["SQL"]:
-                    #             fixedTl = xS[j]["SQL"].replace("'", "''")
-
-                    #             report["Body"]["objects"][i]["MasterObj_Data_selection"]["masterObjectX"][j]["SQL"] = fixedTl
-
-                    # for j in range(len(tS)):
-                    #     if "SQL" in tS[j]:
-                    #         if "''" not in tS[j]["SQL"]:
-                    #             fixedTl = tS[j]["SQL"].replace("'", "''")
-
-                    #             report["Body"]["objects"][i]["MasterObj_Data_selection"]["masterObjectX"][j]["SQL"] = fixedTl
-
-                # report["Selected_Global"] = json.loads(json.dumps(report["Selected_Global"]).replace(
-                #     "'", "''")) if "Selected_Global" in report else dict()
-
-                ___tags=report["TAGS"].split(",")
-                ___mlTag=data[ii].get("ml",dict()).get("tag","")
-                ___clTag=data[ii].get("cl",dict()).get("tag","")
-                ___tlClusterTag=data[ii].get("tlCluster",dict()).get("tag","")
-                ___tlIotTag=data[ii].get("tlIot",dict()).get("tag","")
-                ___tags.append(___tags,___mlTag,___clTag,___tlClusterTag,___tlIotTag)
-                
-                print(___tags)
                 report["TAGS"] = data[ii].get("tags", "")
 
                 report["Report_Description"] = data[ii].get("description", "")
@@ -245,13 +226,8 @@ def cloneReport_api(request,newBody=None):
                 "data": clonedReports
             }
             # save
-            # res = tasker.update(task)
-            res={"op":"ok"}
-
-
+            res = tasker.update(task)
             tasker.closeConnection()
-
-            # res={"op":"ok"}
 
             if "op" in res:
                 if res["op"] == "ok":
@@ -270,9 +246,10 @@ def cloneReport_api(request,newBody=None):
             clonedReportsOut.append(
                 rep["Body"] if rep is not None and "Body" in rep else None)
         # clonedReportsOut=clonedReports
-        return HttpResponse(json.dumps(clonedReportsOut), content_type="application/json")
+        return JsonResponse(data=clonedReportsOut)
+        # return HttpResponse(json.dumps(clonedReportsOut), content_type="application/json")
 
-    return (HttpResponseBadRequest())
+    return HttpResponseBadRequest()
 
 
 def cleanup(label, _type):
@@ -332,6 +309,7 @@ def cloneReport(R_IDs: list, data: list, tasker, save=False, superClone=False):
         cl = ""
         tl = ""
         tlIot = ""
+        params=dict()
         lCopyML = False
         lCopyCL = False
         mlTag = ""
@@ -341,6 +319,9 @@ def cloneReport(R_IDs: list, data: list, tasker, save=False, superClone=False):
         tlIot = None
         absTitles = list()
         yAxisTitles=list()
+        if "params" in reportData:
+            params["live"]=reportData.get("params",dict()).get("live",False)
+            params["frequency"]=reportData.get("params",dict()).get("frequency",0)
         if "ml" in reportData:
             ml = reportData["ml"]["members"]
             if "lCopy" in reportData["ml"]:

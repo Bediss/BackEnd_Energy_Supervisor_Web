@@ -465,24 +465,7 @@ def cloneReport(R_IDs: list, data: list, tasker, save=False, superClone=False):
                     if absTitles[ii] is None:
                         continue
                     obj["MasterObj_Data_selection"]["page"]["page"] = absTitles[ii]
-        # if len(yAxisTitles) > 0:
-        # for ii, obj in enumerate(body["objects"]):
-        #     print(obj["MasterObj_Data_Mapping"])
-        #     print("------------")
-        #     # if ii > len(yAxisTitles)-1:
-        #     #     break
-        #     _obj=yAxisTitles[ii]
-        #     for iii,__obj in enumerate(_obj):
-        #         if "yaxis{}".format(iii+1) in obj["MasterObj_Data_Mapping"]:
-        #             obj["MasterObj_Data_Mapping"]["yaxis{}".format(iii+1)]["title"]["text"]= __obj
-
-                # obj["MasterObj_Data_Mapping"]["yaxis1"]["title"]["text"]= __obj
-                # obj["MasterObj_Data_Mapping"]["yaxis2"]["title"]["text"]= __obj
-
-            # if absTitles[ii] is None:
-            #         continue
-            # obj["MasterObj_Data_selection"]["page"]["page"] = absTitles[ii]
-
+    
         for m in sgf:
             for l in [ml, cl, tlCluster, tlIot]:
                 if l is not None:

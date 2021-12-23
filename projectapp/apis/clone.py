@@ -9,10 +9,10 @@ from .getTl import _getTl2,_getTl
 
 def clone(request):
     if request.method == "POST":
-        isValid = jwtVerifyRequest(request)
-        if type(isValid) != dict:
-            return isValid
         try:
+            isValid = jwtVerifyRequest(request)
+            if type(isValid) != dict:
+                return isValid
             _data = json.loads(request.body)
             reportId = _data.get("IDs", [None])[0]
             tempIds = copy.deepcopy(_data["IDs"])
@@ -21,9 +21,9 @@ def clone(request):
             # reportId = _data.get("S_IDs", [None])[0] if reportId is None else reportId
             db = initDB()
             isSynoptic = db.exec("""
-            SELECT "Body"::jsonb ? 'object' FROM public."Reporting_V3" where "Report_Code"='{}';
-            """.format(reportId))
-            db.close()
+            SELECT "Body"::jsonb ? 'object' FROM public."Reporting_V3" where "Report_Code"=%s;
+            """,(reportId,))
+            # db.close()
             isSynoptic = isSynoptic[0]
 
             if isSynoptic is True:
@@ -168,39 +168,41 @@ def clone(request):
                     }
                 }
             validate(instance=_data, schema=schema)
+            if isSynoptic is True:
+                return cloneSynopticV2(request=request, newBody=_data)
+            else:
+                tlCluster=_data["data"][0].get("tlCluster",None)
+                tlIot=_data["data"][0].get("tlIot",None)
+                # db=initDB()
+                if tlCluster and not tlIot:
+                    tlCluster=tlCluster.get("id")
+                    tlIot=db.exec(
+                            """
+                            SELECT pair FROM public.tl where tl_id='{}'
+                            """.format(tlCluster))
+                    if tlIot is not None:
+                        tlIot=tlIot[0]
+                        if tlIot is not None:
+                            _data["data"][0]["tlIot"]={"id":tlIot}
+                if not tlCluster and tlIot:
+                    tlIot=tlIot.get("id")
+                    tlCluster=db.exec(
+                            """
+                            SELECT pair FROM public.tl where tl_id='{}'
+                            """.format(tlIot))
+                    
+                    if tlCluster is not None:
+                        tlCluster=tlCluster[0]
+                        if tlCluster is not None:
+                            _data["data"][0]["tlCluster"]={"id":tlCluster}
+                # db.close()
+                return cloneReport_api(request=request, newBody=_data)
         except Exception as exp:
             print(exp)
             return HttpResponseBadRequest()
-
-        if isSynoptic is True:
-            return cloneSynopticV2(request=request, newBody=_data)
-        else:
-            tlCluster=_data["data"][0].get("tlCluster",None)
-            tlIot=_data["data"][0].get("tlIot",None)
-            db=initDB()
-            if tlCluster and not tlIot:
-                tlCluster=tlCluster.get("id")
-                tlIot=db.exec(
-                        """
-                        SELECT pair FROM public.tl where tl_id='{}'
-                        """.format(tlCluster))
-                if tlIot is not None:
-                    tlIot=tlIot[0]
-                    if tlIot is not None:
-                        _data["data"][0]["tlIot"]={"id":tlIot}
-            if not tlCluster and tlIot:
-                tlIot=tlIot.get("id")
-                tlCluster=db.exec(
-                        """
-                        SELECT pair FROM public.tl where tl_id='{}'
-                        """.format(tlIot))
-                
-                if tlCluster is not None:
-                    tlCluster=tlCluster[0]
-                    if tlCluster is not None:
-                        _data["data"][0]["tlCluster"]={"id":tlCluster}
+        finally:
             db.close()
-            return cloneReport_api(request=request, newBody=_data)
+
     return HttpResponseBadRequest()
 
 

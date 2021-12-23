@@ -6,32 +6,46 @@ from .loginMgr import jwtVerifyRequest
 def getUser(request):
     if request.method == 'GET':
         try:
-            if len(request.GET.keys()) >1:
-                return HttpResponseBadRequest()
-
             isValid=jwtVerifyRequest(request)
             if type(isValid) !=dict:
                     return isValid
+        except:
+            return HttpResponseBadRequest()
+        try:
             userId=isValid["user"]["userId"]
             getHotList=request.GET.get("hl",None)
-            db=initDB()
+
             if getHotList is None:
-                user=db.exec("""
-                    select row_to_json(t) from (select "User_Master_Name","User_Factbook","User_Report" from "User_Master" where "User_Master_Code"='{}') t
-                    """.format(userId))
-                user=user[0]
+                _user=next((user for user in getUsers() if user.get("User_Master_Code",None)==userId),dict())
+                user=dict({
+                    "User_Master_Name":_user.get("User_Master_Name",""),
+                    "User_Factbook":_user.get("User_Factbook",""),
+                    "User_Report":_user.get("User_Report",""),
+                    "userType":_user.get("userType","")
+                })
+                user["userType"]=user.get("userType","").split("|")
+                resp=user
             else:
-                user=db.exec("""
-                    select row_to_json(t) from (select "User-HotListe" from "User_Master" where "User_Master_Code"='{}') t
-                    """.format(userId))
-                user=user[0].get("User-HotListe",None)
-            db.close()
-            if user is None:
-                return HttpResponseNotFound()
-            resp=JsonResponse(data=user,safe=False)
-            resp.status_code=200
+                db=initDB()
+                hl=db.exec("""
+                        select array_to_json(array_agg(row_to_json(t)))from (
+                        select "Report_Code", "Report_Name" 
+                        from public."Reporting_V3" r 
+                        inner join 
+                        (
+                        select unnest("User-HotListe") coder
+                        from public."User_Master" 
+                        where "User_Master_Code"=%s) s1
+                        on s1.coder=r."Report_Code"
+                        ) AS t;
+                """,(userId,))
+                db.close()
+                hl=list(hl).pop()
+                resp={"hotList":hl}
+            resp=JsonResponse(data=resp,safe=False)
             return resp
         except Exception as exp:
+            print(exp)
             return HttpResponseServerError()
 
     return HttpResponseBadRequest()

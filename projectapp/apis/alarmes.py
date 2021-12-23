@@ -76,6 +76,6 @@ def getobjective(request):
                 "retour": "json"}
         data = tasker.cluster(task)
         tasker.closeConnection()
-        print(data)
+
         data = json.dumps(data)
         return HttpResponse(data, content_type='application/json')

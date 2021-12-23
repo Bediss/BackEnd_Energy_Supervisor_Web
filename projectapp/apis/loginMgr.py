@@ -4,19 +4,22 @@ import jwt
 from datetime import datetime,timedelta
 
 SECRET=os.environ["SECRET"] if "SECRET" in os.environ else "hindi"
-
-
+TOKEN_LIFE=os.environ["TOKEN_LIFE"] if "TOKEN_LIFE" in os.environ else False
+TOKEN_LIFE=TOKEN_LIFE if TOKEN_LIFE is False else int(TOKEN_LIFE)
 def jwtVerify(token):
     try:
         if token == superToken:
             return {"code":200,"msg":"ok"}
         decoded = jwt.decode(token, SECRET,algorithm="HS256")
-        exp=decoded.get("exp")
-        iat=decoded.get("iat")
-        now=int(datetime.timestamp(datetime.now(tz=TIME_ZONE)))
+        iat=decoded.get("iat",None)
+        _type=decoded.get("userType",None)
+ 
+        if type(TOKEN_LIFE) is int:
+            exp=decoded.get("exp",None)
+            now=int(datetime.timestamp(datetime.now(tz=TIME_ZONE)))
+            if exp<now:
+                return {"code":401,"msg":"token expired"}
 
-        if exp<now:
-            return {"code":401,"msg":"token expired"}
         return {"code":200,"msg":"ok","user":decoded}
     except:
         return {"code":401,"msg":"invalid token"}
@@ -24,7 +27,6 @@ def jwtVerify(token):
 def jwtVerifyRequest(request):
     res=HttpResponse()
     res["Access-Control-Allow-Origin"] = "*"
-    # res["Access-Control-Allow-Methods"] = "GET, OPTIONS"
     try:
         token=request.headers.get("token",None)
         r=jwtVerify(token)
@@ -48,13 +50,15 @@ def jwtCreate(args):
     _user={
         "email":user["Email_User_Master"],
         "userId":user["User_Master_Code"],
-        "exp":datetime.now(tz=TIME_ZONE)+timedelta(hours=8),
-        # "exp":datetime.now(tz=TIME_ZONE)+timedelta(seconds=10),
+        "userType":user["userType"],
+        # "exp":datetime.now(tz=TIME_ZONE)+timedelta(hours=TOKEN_LIFE),
         "iat":datetime.now(tz=TIME_ZONE)
         }
+
+    if type(TOKEN_LIFE) is int:
+        _user["exp"]=datetime.now(tz=TIME_ZONE)+timedelta(hours=TOKEN_LIFE)
     token= jwt.encode(_user, SECRET,algorithm="HS256").decode("utf-8")
     return {"code":200,"token":token}
-    
 
 def login(request):
     if request.method=="POST":
@@ -64,12 +68,14 @@ def login(request):
                 "required": ["email", "password"],
                 "properties": {
                     "email": {
+                        "description":"user email",
                         "type":"string",
-                        "minLength":1
+                        "format": "email"
                     },
                     "password": {
+                        "description":"user password",
                         "type":"string",
-                        "minLength":1
+                        "minLength":5
                     },
                 }
             }

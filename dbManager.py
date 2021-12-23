@@ -5,13 +5,16 @@ import threading
 import signal
 import asyncio
 from retrying import retry
+import time
 
 class threadJob(threading.Thread):
-    def __init__(self, func, args=None):
+    def __init__(self, func, args=None,daemon=True):
         self._stop_event = threading.Event()
         self.func = func
         self.args = args
+
         threading.Thread.__init__(self)
+        self.daemon=daemon
 
     def run(self):
         self.func(self.args)
@@ -42,7 +45,7 @@ class DBManager(object):
                                     params exp [{"proc":[param1,param2]}]
 
     """
-    def __init__(self, database, username="postgres", password="root", server="localhost", port=5432, autoCommit=True,dictCursor=False,autoConnect=True):
+    def __init__(self, database, username="postgres", password="root", server="localhost", port=5432, autoCommit=True,dictCursor=False,autoConnect=True,application_name=''):
         if not database:
             raise Exception("database is required")
         if not username:
@@ -65,7 +68,8 @@ class DBManager(object):
             "username": username,
             "password": password,
             "port": port,
-            "autoCommit":autoCommit
+            "autoCommit":autoCommit,
+            "application_name":application_name
         }
         try:
             if autoConnect is True:
@@ -85,7 +89,8 @@ class DBManager(object):
             password = self.params.get("password")
             port = self.params.get("port")
             autoCommit=self.params.get("autoCommit")
-            conn = psycopg2.connect(host=server, database=database, user=username, password=password, port=port)
+            application_name=self.params.get("application_name")
+            conn = psycopg2.connect(host=server, database=database, user=username, password=password, port=port,application_name=application_name)
             if (conn):
                 conn.set_session(autocommit=autoCommit)
             return conn
@@ -140,9 +145,15 @@ class DBManager(object):
                 if (len(result) == 1):
                     result = result[0]
                 return result
-            except Exception as inst:
+            except psycopg2.errors.UndefinedFunction as exp:
+                return dict({
+                    "error":True,
+                    "args":exp
+                })
+            except Exception as exp:
                 # cursor.close()
-                return inst
+                return dict({"error":True,"args":exp})
+
             finally:
                 cursor.close()
 
@@ -160,14 +171,16 @@ class DBManager(object):
                     paramsList = paramsList[:-1]
                 cursor.execute("call {}({});".format(procedure, paramsList), tuple(params))
                 resp = cursor.fetchone()
+            except psycopg2.ProgrammingError as exp:
+                return {"error":False}
             except Exception as inst:
-                # 
-                if inst.args[0] == "no results to fetch":
-                    return {"error":False}
-                else:
+                # if inst.args[0] == "no results to fetch":
+                #     return {"error":False}
+                # else:
                     return {"error":True,"args":inst.args}
             finally:
-                cursor.close()
+                if cursor and cursor.closed is False:
+                    cursor.close()
 
     def startTransaction(self):
         if (self.autoCommit):
@@ -300,7 +313,6 @@ class DBManager(object):
 
                             if channel == notify.channel:
                                 callback(params, payload=notify.payload)
-                                # print("Got NOTIFY:", notify.pid, notify.channel, notify.payload)
             else:
                 raise Exception("retry")
 
@@ -337,7 +349,12 @@ class DBManager(object):
                         except:
                             print("listener connection terminated.")
                             self.close()
-                            self.conn=self.__connect()
+                            _retry=True
+                            while _retry:
+                                time.sleep(1)
+                                self.conn=self.__connect()
+                                if not self.closed():
+                                    _retry=False
                             curAndListen()
                             continue
                 self._th=threadJob(func=listening)
@@ -359,7 +376,6 @@ class DBManager(object):
                                 notify = self.conn.notifies.pop(0)
                                 if channel==notify.channel:
                                     callback(params,payload=notify.payload)
-                                    # print("Got NOTIFY:", notify.pid, notify.channel, notify.payload)
                     except:
                         self.close()
                         self.conn=self.__connect()

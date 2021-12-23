@@ -585,12 +585,12 @@ class Back_DB_bridge(object):
                     output=db.exec("""
                     select array_to_json(array_agg(row_to_json(t)))from (select * from {} ) AS t;
                     """.format(table_name_pbi_normalised))
+                    output=output if output is not None else list([None])
                     output=output[0]
                     _____output=list()
                     
                     if type(output) is list:
                         for cl in json.loads(CL_json):
-                            _toPush=dict()
                             for ml in json.loads(ML_json):
                                 _cc_name=cl["Le_Compteur"]
                                 _cc=cl["Code_Compteur"]
@@ -603,7 +603,6 @@ class Back_DB_bridge(object):
                                     elem.pop("datalive",None)
                                     elem.update({"value":__temp})
                                     elem.update({"cc_m":cc_m})
-                            
                                     _____output.append(elem)
                         output=_____output
             elif (output_type == "table"):
@@ -611,13 +610,7 @@ class Back_DB_bridge(object):
                 db.execProc("create_table_pbi_normalised_cluster", [
                             table_name_pbi_normalised, ML_table_name, CL_table_name])
                 output={"tablename": table_name_pbi_normalised}
-            else:
-                ""
-        # End normalised of cluster
         else:
-            # create table normalised
-            # call procedure createTablePbiNormalised
-
             if TL is None:
                 db.execProc("create_table_pbi_normalised_cluster", [
                             table_name_pbi_normalised, ML_table_name, CL_table_name])

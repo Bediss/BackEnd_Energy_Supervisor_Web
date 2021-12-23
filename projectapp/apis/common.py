@@ -10,7 +10,11 @@ import re
 import time
 from jsonschema import validate
 from pytz import timezone
-
+import signal
+import sys
+dbuser=None
+dbtl=None
+dbac=None
 
 preps = dict({
     "energies": list(),
@@ -59,9 +63,9 @@ def initPrep():
     finally:
         db.close()
 
-eventsOn=False
+eventsOn=True
 
-databasename = os.environ["databasename"] if "databasename" in os.environ else "vmz_29_11_2021_Test"
+databasename = os.environ["databasename"] if "databasename" in os.environ else "VMZDB_20_12"
 databaseServer = os.environ["databaseServer"] if "databaseServer" in os.environ else "192.168.3.91"
 databaseUser = os.environ["databaseUser"] if "databaseUser" in os.environ else "postgres"
 databasePassword = os.environ["databasePassword"] if "databasePassword" in os.environ else "root"
@@ -105,6 +109,7 @@ mlSchema = {
     "minItems": 1,
     "uniqueItems": True,
 }
+
 tlSchema = {
     "anyOf": [
         {
@@ -172,9 +177,9 @@ tlCloneSchema_old = {
 }
 
 
-def initDB(autoCommit=True, dictCursor=False,autoConnect=True):
+def initDB(autoCommit=True, dictCursor=False,autoConnect=True,application_name=""):
     return DBManager(database=databasename, username=databaseUser, password=databasePassword,
-                     server=databaseServer, port=databasePort, autoCommit=autoCommit, dictCursor=dictCursor,autoConnect=autoConnect)
+                     server=databaseServer, port=databasePort, autoCommit=autoCommit, dictCursor=dictCursor,autoConnect=autoConnect,application_name=application_name)
 
 
 def initDBB(dictCursor=False, transaction=False):
@@ -205,6 +210,10 @@ def prepQueryParams(input=list) -> dict():
     }
 
 def listeners():
+    global dbuser
+    global dbtl
+    global dbac
+
     if eventsOn is True:
         def callback(params=None, payload=None):
     
@@ -212,10 +221,7 @@ def listeners():
                 payload = json.loads(payload)
                 action = payload.get("op")
                 data = json.loads(payload["data"])
-                print("------------------")
-                print(_type)
-                print(data)
-                print("------------------")
+ 
                 if action.lower() == 'update':
                     if _type=="users":
                         i = next((i for i in range(len(users)) if users[i].get("User_Master_Code", None) == data["User_Master_Code"]), None)
@@ -226,12 +232,10 @@ def listeners():
                         if i is not None:
                             preps["tl"][i] = data
                     elif _type == 'allCompteurs':
-                        print(data)
+                       
                         i = next((i for i in range(len(preps["allCompteurs"])) if preps["allCompteurs"][i].get("Code_Compteur", None) == data["Code_Compteur"]), None)
                         if i is not None:
                             preps["allCompteurs"][i] = data
-
-                            print(preps["allCompteurs"][i])
                 elif action.lower() == 'create':
                     if _type=="users":
                         users.append(data)
@@ -249,9 +253,22 @@ def listeners():
                     elif _type == 'allCompteurs':
                         i = next((i for i in range(len(preps["allCompteurs"])) if preps["allCompteurs"][i].get("Code_Compteur", None) == data["Code_Compteur"]), None)
                         preps["allCompteurs"].pop(i)
-        dbuser = initDB()
+        dbuser = initDB(application_name="sync_users")
         dbuser.listenV2("user_notif",callback=callback,params={"type":"users"},separateThread=True)
-        dbtl = initDB()
+        dbtl = initDB(application_name="sync_tl")
         dbtl.listenV2("tl_notif",callback=callback,params={"type":"tl"},separateThread=True)
-        dbac = initDB()
+        dbac = initDB(application_name="sync_allCompteurs")
         dbac.listenV2("allCompteurs_notif",callback=callback,params={"type":"allCompteurs"},separateThread=True)
+
+def signal_handler(sig, frame):
+    global dbuser
+    global dbtl
+    global dbac
+    print('You pressed Ctrl+C!!')
+    dbuser.close()
+    dbtl.close()
+    dbac.close()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)

@@ -18,6 +18,7 @@ from projectapp.apis import energies
 from projectapp.apis import alarmes
 from projectapp.apis import pdf
 from projectapp.apis import dataRequests
+from projectapp.apis import input
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -79,11 +80,27 @@ urlpatterns = [
     path("api/getAllEnergies/",energies.getAllEnergies),
 
     path("api/getIncidents/",alarmes.getIncidents),
+    
+    path('api/saisiePMG/', input.inputValuePMG),
 
     path('display/', views._filter),
     path('filter/', views._filter),
     path('updatedelete/', views.updatedelete),
+
+
     #success
+
+
+
+
+
+
+
+
+
+
+
+
  
     path('sendid/', views.sendnewid),
 

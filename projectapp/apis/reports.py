@@ -45,14 +45,12 @@ def getReportById(request):
         
         resp = resp.pop()
         db=initDB()
-  
         db.exec("""
-            UPDATE public."User_Master" SET "User-HotListe" = jsonb_path_query_array('[%s]' || "User-HotListe" - '%s', '$[0 to 9]')
-            where "User_Master_Code"='%s';
-        """,params=(reportId,reportId,userId))
+            UPDATE public."User_Master" 
+            SET "User-HotListe" = ('{{{}}}' || array_remove("User-HotListe", %s))[1:10]
+            where "User_Master_Code"=%s;
+        """.format(reportId),params=(reportId,userId))
         db.close()
-        # response=JsonResponse(data=resp)
-        # return response
 
         response = JsonResponse(data=resp,safe=False)
 

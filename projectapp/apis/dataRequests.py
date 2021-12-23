@@ -22,8 +22,6 @@ def iotinner(request):
             print(exp)
             return HttpResponseBadRequest()
         tl = task.get("tl", None)
-        if tl is None:
-            return HttpResponseBadRequest()
         if type(tl) is str:
             tlSQL = json.loads(_getTl(tl, "Tl_Sql"))
             
@@ -59,10 +57,6 @@ def cluster(request):
             print(exp)
             return HttpResponseBadRequest()
         tasker=initDBB()
-        # tasker= Back_DB_bridge(database='biz_vmzdb_v03', username=databaseUser, password=databasePassword, server='192.168.3.80', port=databasePort)
-
-        # tasker = Back_DB_bridge(database=databasename, username=databaseUser,
-        #                         password=databasePassword, server=databaseServer, port=databasePort)
         if task.get("tl", False):  
             tt = _getTl(task.get("tl", ""), "Tl_Sql")
             tt = json.loads(tt)
@@ -119,8 +113,6 @@ def plotUpdate(request):
         data=dict()
         if tl is None:
             db=initDBB()
-            # db= Back_DB_bridge(database='biz_vmzdb_v03', username=databaseUser, password=databasePassword, server='192.168.3.80', port=databasePort)
-
             data["data"]=db.cluster(task)
             db.closeConnection()
         else:
@@ -133,8 +125,6 @@ def plotUpdate(request):
                 task["tl"]=tlSQL
                 tasker = Back_worker_bridge(
                 rabbitAddress=rabbitServer, rabbitPassword=rabbitPassword, rabbitUsername=rabbitUserName)
-                # rabbitAddress='192.168.3.80', rabbitPassword=rabbitPassword, rabbitUsername=rabbitUserName)
-                
                 data["data"]= tasker.iot_inner(task)
                 tasker.close()
                 data["maxPlotPoint"]=tlUser.get(tl,dict()).get("tlConfig",dict()).get("maxPlotPoint",None)

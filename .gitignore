@@ -1,3 +1,4 @@
 Backend/bizeyesproject/logs/debug.log
 /bizeyesproject/logs/debug.log
+*.pyc 
 # dependencies
